@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>NBA Tier-1 CO-PO Attainment Dashboard</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+<div class="header">
+  <h1>NBA CO–PO Attainment Dashboard</h1>
+  <p>Tier-1 Accreditation Analytics System</p>
+</div>
+
+<div class="upload-section">
+  <input type="file" id="fileUpload">
+  <button onclick="processFile()">Analyze</button>
+  <button onclick="generatePDF()">Download NBA Report</button>
+</div>
+
+<div class="dashboard">
+
+  <div class="card">
+    <h3>CO Attainment</h3>
+    <div id="coTable"></div>
+  </div>
+
+  <div class="card">
+    <h3>PO Attainment</h3>
+    <div id="poTable"></div>
+  </div>
+
+</div>
+
+<div class="card">
+  <h3>PO Attainment Chart</h3>
+  <canvas id="poChart"></canvas>
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>
