@@ -1,0 +1,52 @@
+body {
+  font-family: Arial;
+  background: #f4f6f9;
+  margin: 20px;
+}
+
+.header {
+  text-align: center;
+}
+
+.upload-section {
+  text-align: center;
+  margin: 20px;
+}
+
+button {
+  padding: 8px 15px;
+  margin: 5px;
+  background: #004080;
+  color: white;
+  border: none;
+  cursor: pointer;
+}
+
+.dashboard {
+  display: flex;
+  gap: 20px;
+}
+
+.card {
+  background: white;
+  padding: 15px;
+  border-radius: 8px;
+  flex: 1;
+  box-shadow: 0 0 10px rgba(0,0,0,0.1);
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th, td {
+  padding: 8px;
+  border: 1px solid #ddd;
+  text-align: center;
+}
+
+.level3 { background-color: #4CAF50; color: white; }
+.level2 { background-color: #FFC107; }
+.level1 { background-color: #FF5722; color: white; }
+.level0 { background-color: #B71C1C; color: white; }
