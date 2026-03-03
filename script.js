@@ -1,5 +1,4 @@
 let globalPOData = {};
-let globalCOData = {};
 
 function processFile() {
 
@@ -11,11 +10,8 @@ function processFile() {
     const data = new Uint8Array(e.target.result);
     const workbook = XLSX.read(data, {type:'array'});
 
-    const marksSheet = workbook.Sheets["Sheet1"];
-    const marksData = XLSX.utils.sheet_to_json(marksSheet);
-
-    const ipccSheet = workbook.Sheets["IPCC"];
-    const ipccData = XLSX.utils.sheet_to_json(ipccSheet, {header:1});
+    const marksData = XLSX.utils.sheet_to_json(workbook.Sheets["Sheet1"]);
+    const ipccData = XLSX.utils.sheet_to_json(workbook.Sheets["IPCC"], {header:1});
 
     calculateAttainment(marksData, ipccData);
   };
@@ -25,53 +21,74 @@ function processFile() {
 
 function calculateAttainment(marksData, ipccData) {
 
-  let coColumns = Object.keys(marksData[0]).filter(key => key.includes("CO"));
-  let totalStudents = marksData.length;
+  // -------- Robust CO detection --------
+  let headers = Object.keys(marksData[0]);
 
+  let coColumns = headers.filter(h =>
+      h.toLowerCase().includes("co") && !isNaN(parseFloat(marksData[0][h]))
+  );
+
+  if(coColumns.length === 0){
+      alert("CO columns not detected. Check column names.");
+      return;
+  }
+
+  let total = marksData.length;
   let coLevels = {};
   let coPercent = {};
 
   coColumns.forEach(co => {
 
-    let count = 0;
-    marksData.forEach(student => {
-      if(student[co] >= 60) count++;
-    });
+    let count = marksData.filter(s => parseFloat(s[co]) >= 60).length;
+    let percent = (count/total)*100;
+    coPercent[co] = percent;
 
-    let percentage = (count / totalStudents) * 100;
-    coPercent[co] = percentage;
-
-    if(percentage >= 80) coLevels[co] = 3;
-    else if(percentage >= 70) coLevels[co] = 2;
-    else if(percentage >= 60) coLevels[co] = 1;
+    if(percent >= 80) coLevels[co] = 3;
+    else if(percent >= 70) coLevels[co] = 2;
+    else if(percent >= 60) coLevels[co] = 1;
     else coLevels[co] = 0;
   });
 
-  globalCOData = coLevels;
   displayCO(coPercent, coLevels);
 
-  let matrixStartRow = ipccData.findIndex(row => row.includes("CO"));
-  let header = ipccData[matrixStartRow];
+  // -------- Robust Matrix Extraction --------
+  let start = ipccData.findIndex(r =>
+      r.some(cell => String(cell).toLowerCase().includes("co"))
+  );
 
+  if(start === -1){
+      alert("CO-PO Matrix not detected in IPCC sheet.");
+      return;
+  }
+
+  let header = ipccData[start];
   let matrix = {};
 
-  for(let i = matrixStartRow + 1; i < matrixStartRow + 6; i++) {
-    let row = ipccData[i];
-    matrix[row[0]] = {};
+  for(let i = start+1; i < ipccData.length; i++){
 
-    for(let j = 1; j < header.length; j++) {
-      matrix[row[0]][header[j]] = row[j] || 0;
+    let row = ipccData[i];
+    if(!row || !row[0]) continue;
+
+    if(String(row[0]).toLowerCase().includes("co")){
+        matrix[row[0]] = {};
+
+        for(let j=1; j<header.length; j++){
+            matrix[row[0]][header[j]] = parseFloat(row[j]) || 0;
+        }
     }
   }
 
   calculatePO(coLevels, matrix);
 }
 
-function calculatePO(coLevels, matrix) {
+function calculatePO(coLevels, matrix){
 
   let poResults = {};
 
   Object.keys(matrix).forEach(co => {
+
+    if(!coLevels[co]) return;
+
     Object.keys(matrix[co]).forEach(po => {
 
       if(!poResults[po]) poResults[po] = {sum:0, weight:0};
@@ -82,75 +99,42 @@ function calculatePO(coLevels, matrix) {
   });
 
   let finalPO = {};
-
-  Object.keys(poResults).forEach(po => {
+  Object.keys(poResults).forEach(po=>{
     finalPO[po] = poResults[po].weight === 0 ? 0 :
-                  (poResults[po].sum / poResults[po].weight).toFixed(2);
+                  poResults[po].sum/poResults[po].weight;
   });
 
   globalPOData = finalPO;
   displayPO(finalPO);
 }
 
-function displayCO(percent, levels) {
+function displayCO(percent, levels){
 
-  let table = "<table><tr><th>CO</th><th>% ≥60</th><th>Level</th></tr>";
+  let table="<table><tr><th>CO</th><th>% ≥60</th><th>Level</th></tr>";
 
-  Object.keys(percent).forEach(co => {
-
-    table += `<tr>
-                <td>${co}</td>
-                <td>${percent[co].toFixed(2)}%</td>
-                <td class="level${levels[co]}">${levels[co]}</td>
-              </tr>`;
+  Object.keys(percent).forEach(co=>{
+    table+=`<tr>
+      <td>${co}</td>
+      <td>${percent[co].toFixed(2)}%</td>
+      <td>${levels[co]}</td>
+    </tr>`;
   });
 
-  table += "</table>";
-  document.getElementById("coTable").innerHTML = table;
+  table+="</table>";
+  document.getElementById("coTable").innerHTML=table;
 }
 
-function displayPO(poData) {
+function displayPO(poData){
 
-  let table = "<table><tr><th>PO</th><th>Attainment</th><th>Status</th></tr>";
+  let table="<table><tr><th>PO</th><th>Level</th></tr>";
 
-  Object.keys(poData).forEach(po => {
-
-    let status = poData[po] >= 2 ? "Attained" : "Needs Improvement";
-
-    table += `<tr>
-                <td>${po}</td>
-                <td>${poData[po]}</td>
-                <td>${status}</td>
-              </tr>`;
+  Object.keys(poData).forEach(po=>{
+    table+=`<tr>
+      <td>${po}</td>
+      <td>${poData[po].toFixed(2)}</td>
+    </tr>`;
   });
 
-  table += "</table>";
-  document.getElementById("poTable").innerHTML = table;
-
-  new Chart(document.getElementById("poChart"), {
-    type: 'bar',
-    data: {
-      labels: Object.keys(poData),
-      datasets: [{
-        label: "PO Attainment",
-        data: Object.values(poData)
-      }]
-    }
-  });
-}
-
-function generatePDF() {
-
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF();
-
-  doc.text("NBA CO-PO Attainment Report", 20, 20);
-
-  let y = 30;
-  Object.keys(globalPOData).forEach(po => {
-    doc.text(`${po} : ${globalPOData[po]}`, 20, y);
-    y += 10;
-  });
-
-  doc.save("NBA_Attainment_Report.pdf");
+  table+="</table>";
+  document.getElementById("poTable").innerHTML=table;
 }
