@@ -10,8 +10,13 @@ function processFile() {
     const data = new Uint8Array(e.target.result);
     const workbook = XLSX.read(data, {type:'array'});
 
-    const marksData = XLSX.utils.sheet_to_json(workbook.Sheets["Sheet1"]);
-    const ipccData = XLSX.utils.sheet_to_json(workbook.Sheets["IPCC"], {header:1});
+    const marksSheetName = workbook.SheetNames[0];
+    const marksData = XLSX.utils.sheet_to_json(workbook.Sheets[marksSheetName]);
+    let ipccSheetName = workbook.SheetNames.find(name => 
+    name.toLowerCase().includes("ipcc")
+);
+
+const ipccData = XLSX.utils.sheet_to_json(workbook.Sheets[ipccSheetName], {header:1});
 
     calculateAttainment(marksData, ipccData);
   };
