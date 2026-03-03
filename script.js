@@ -11,7 +11,25 @@ function processFile() {
     const workbook = XLSX.read(data, {type:'array'});
 
     const marksSheetName = workbook.SheetNames[0];
-    const marksData = XLSX.utils.sheet_to_json(workbook.Sheets[marksSheetName]);
+const rawMarks = XLSX.utils.sheet_to_json(workbook.Sheets[marksSheetName], {header:1});
+
+// Find header row containing CO
+let headerRowIndex = rawMarks.findIndex(row =>
+  row.some(cell => String(cell).toLowerCase().includes("co"))
+);
+
+if(headerRowIndex === -1){
+  alert("CO header row not found.");
+  return;
+}
+
+let headers = rawMarks[headerRowIndex];
+
+// Convert to proper JSON starting from header row
+let marksData = XLSX.utils.sheet_to_json(
+  workbook.Sheets[marksSheetName],
+  { range: headerRowIndex }
+);
     let ipccSheetName = workbook.SheetNames.find(name => 
     name.toLowerCase().includes("ipcc")
 );
